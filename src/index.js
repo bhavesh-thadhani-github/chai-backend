@@ -1,9 +1,8 @@
 // require('dotenv').config({path: './env'})
 import dotenv from 'dotenv'
-
-import express from 'express'
 import connectDB from "./db/index.js";
-const app = express()
+import {app} from './app.js'
+
 //You have to always require these 3 packages -> mongoose, express, dotenv
 //2 MAIN IMP POINTS:
 //1)Whenver we talk to a DB then there is a high probability that problems 'll arrive, so always use trycatch or promises
