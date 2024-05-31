@@ -48,25 +48,32 @@ const registerUser = asyncHandler(async (req, res) => {
     //we can check as many validations as we can, usually there is separate file for validation checks in the companies
 
 // 3) CHECK IF USER ALREADY EXISTS (we can make it more better by approaching that we first check the email & then the username)
-    const existedUser = User.findOne({
+    const existedUser = await User.findOne({
         $or: [{ username }, { email }]
     })
     if (existedUser) {
         throw new ApiError(409, 'User with email or username already exist')
     }
+    console.log(req.files);
 
 // 4) CHECK FOR IMAGES, CHECK FOR AVATAR
     //middleware give us more access to the methods after req. ,just like req.body gives by default by express, similarly multer gives the access of req.files
     //console.log(req.files, req.body) curiosity
     const avatarLocalPath = req.files?.avatar[0]?.path;
-    const coverImageLocalPath = req.files?.coverImage[0]?.path;
+    // const coverImageLocalPath = req.files?.coverImage[0]?.path;
+    //another approach for coverImageLocalPath
+    let coverImageLocalPath;
+    if (req.files && Array.isArray(req.files.coverImage) && req.files.coverImage.length > 0) {
+        coverImageLocalPath = req.files.coverImage[0].path
+    }
+
     //checking the avatar image
     if (!avatarLocalPath) {
         throw new ApiError(400, 'Avatar file is required')
     }
 
 // 5) UPLOAD THEM TO CLOUDINARY
-    const avatar = await uploadOnCloudinary(avatload)
+    const avatar = await uploadOnCloudinary(avatarLocalPath)
     const coverImage = await uploadOnCloudinary(coverImageLocalPath)
 
     if(!avatar){
@@ -75,6 +82,7 @@ const registerUser = asyncHandler(async (req, res) => {
 
 // 6) CREATE USER OBJECT
     //in this whole file only the User is talking to the DB
+    //if we only want to send the data then we use json format, with json we can't send files
     const user = await User.create({
         fullName,
         avatar: avatar.url,
@@ -96,10 +104,13 @@ const registerUser = asyncHandler(async (req, res) => {
     }
 
 // 9) RETURN RESPONSE
+    console.log(res)
     return res.status(201).json(
         new ApiResponse(200, createdUser, 'User registered Successfully')
     )
 
 })
+
+// console.log() to the following things: res, req.body, req.files
 
 export {registerUser}
