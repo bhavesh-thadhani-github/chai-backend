@@ -1,6 +1,7 @@
 import mongoose, {Schema, mongo} from "mongoose";
 import jwt from 'jsonwebtoken'
 //jwt is a bearer token
+//bcrypt is used to hash the password before storing them in DB
 import bcrypt from 'bcrypt'
 
 const userSchema = new Schema({
@@ -56,6 +57,8 @@ userSchema.pre('save', async function(next){
 })
 
 userSchema.methods.isPasswordCorrect = async function(password){
+    //the password which we are passing in the function is the password which is passed by the user
+    //password -> the password that the user enters, this.password -> the password which is stored in the DB
     return await bcrypt.compare(password, this.password)
 }
 
@@ -76,7 +79,7 @@ userSchema.methods.generateAccessToken = function(){
 }
 
 userSchema.methods.generateRefreshToken = function(){
-    jwt.sign({
+    return jwt.sign({
         _id: this._id
     },
     process.env.REFRESH_TOKEN_SECRET,

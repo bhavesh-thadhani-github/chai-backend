@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { registerUser } from "../controllers/user.controller.js";
+import { loginUser, logoutUser, registerUser, refreshAcessToken } from "../controllers/user.controller.js";
 import { upload } from "../middlewares/multer.middleware.js";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 // to store the routes of the user
 // we'll make a router now, this 'll repeat many times
@@ -23,5 +24,13 @@ router.route('/register').post(
     ]),
     registerUser)
 // router.route('/login').post(registerUser)
+
+router.route('/login').post(loginUser)
+
+//secured routes
+//we are adding the middleware first(which is verifyJWT) before logging out the user
+//we can add more middlewares after this verifyJWT as many as we want to 
+router.route('/logout').post(verifyJWT, logoutUser)
+router.route('/refresh-token').post(refreshAcessToken)
 
 export default router
