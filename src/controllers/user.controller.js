@@ -323,47 +323,63 @@ const refreshAcessToken = asyncHandler(async (req, res) => {
   }
 })
 
-//to change the current user password
+//PURPOSE: to change the current user password
+//we don't have to worry that the user is logged in or not we can add the verifyJWT in the route
+//**extracting the old and new password which the user 'll pass in the req.body
 const changeCurrentUser = asyncHandler(async (req, res) => {
   const {oldPassword, newPassword} = req.body
 
   //the user is able to change his password this shows that the user is loggedIn
   //and bcoz of middleware the user is in the req.user & we can extract the user id from that
+  //**finding the user from the DB using user._id
   const user = await User.findById(req.user?._id)
-  const isPasswordCorrect = await user.isPasswordCorrect(oldPassword, this.password)
+  //**checking that password is correct or not which is saved in the DB
+  //the following gives the true or false value
+  const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
 
   if (!isPasswordCorrect) {
     throw new ApiError(400, 'Invalid old password')
   }
 
+  //**setting the new password
   user.password = newPassword
+  //**saving the user
+  //while saving the user we don't want to run other validations
   await user.save({validateBeforeSave: false})
 
+  //sending the msg to the user
   return res
   .status(200)
   .json(new ApiResponse(200, {}, 'Password Changed Successfully'))
 
 })
 
+//PURPOSE: now how to get the current user
 const getCurrentUser = asyncHandler(async (req, res) => {
   return res
   .status(200)
-  .json(200, {}, 'Current User Fetched Successfully')
+  .json(new ApiResponse(200, req.user, 'Current User Fetched Successfully')) //the middleware has been runned, so the user has been injected in the object, now we just have to return it
 })
 
+//PURPOSE: update the fullName & email
 const updateAccountDetails = asyncHandler(async (res, res) => {
-  //we should create a separate controller to edit or update a file
+  //taking the info. from the req.body
+  //we should create a separate controller file to edit or update a file
   const {fullName, email} = req.body
 
   if (!fullName || !email) {
     throw new error(400, 'All Fields are Required')
   }
 
-  const user = User.findByIdAndUpdate(req.user?._id, {$set: {
+  //**now we want the info. to update the fullname and email
+  //$set operator is used to update the fields
+  //new: true, return the info. that we get after updation
+  const user = await User.findByIdAndUpdate(req.user?._id, {$set: {
     fullName,
     email: email
   }}, 
-  {new: true}).select('-password ')
+  {new: true})
+  .select('-password ') //remove the password field
 
   return res
   .status(200)
@@ -371,33 +387,43 @@ const updateAccountDetails = asyncHandler(async (res, res) => {
 })
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
+  //first middleware we have to put is multer so that we can accept the files
+  //only those user can update who are logged in - we have to put this 2 middlewares while routing
+  //file comes from the multer middleware
   const avatarLocalPath = req.file?.path
 
   if (!avatarLocalPath) {
     throw new ApiError(400, 'Avatar file is missing')
   }
 
+  //TODO: delete old image - assignment
+
+  //to upload the avatar file on cloudinary
   const avatar = await uploadOnCloudinary(avatarLocalPath)
 
+  //since we have uploaded the img on the cloudinary, we should get the url of that image
+  //if we does not get the avatar url of cloudinary
   if (!avatar.url) {
     throw new ApiError(400, 'Error while uploading on avatar')
   }
 
+  //updating the avatar image
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
       $set: {
-        avatar: avatar.url
+        avatar: avatar.url  //we have to fill the full url
       }
     },
     {new: true}
-  ).select('-password')
+  ).select('-password') //remove the password field
 
   return res
   .status(200)
-  .json(new ApiResponse(200, user, 'Avatar image updated successfully'))
+  .json(new ApiResponse(200, user, 'Avatar image updated successfully'))  //sending the (updated)user response to the user
 })
 
+//the following code is completely same as the above updateUserAvatar
 const updateUserCoverImage = asyncHandler(async (req, res) => {
   const coverImageLocalPath = req.file?.path
 
@@ -423,7 +449,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 
   return res
   .status(200)
-  .json(new ApiResponse(200, user, 'Cover image updated successfully'))
+  .json(new ApiResponse(200, user, 'Cover image updated successfully')) 
 })
 
 export { registerUser, loginUser, logoutUser, refreshAcessToken, changeCurrentUser, getCurrentUser, updateAccountDetails, updateUserAvatar, updateUserCoverImage };
