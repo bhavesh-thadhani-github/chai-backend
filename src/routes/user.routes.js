@@ -31,6 +31,7 @@ router.route('/login').post(loginUser)
 //we are adding the middleware first(which is verifyJWT) before logging out the user
 //we can add more middlewares after this verifyJWT as many as we want to 
 router.route('/logout').post(verifyJWT, logoutUser)
+//generating the endpoint to get the access tokens
 router.route('/refresh-token').post(refreshAcessToken)
 
 export default router

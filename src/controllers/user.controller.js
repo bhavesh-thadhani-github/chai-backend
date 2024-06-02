@@ -14,7 +14,7 @@ import jwt from "jsonwebtoken";
     })
 })*/
 
-//when we have to generate access token & refresh token then we 'll use the following method, bcoz this work is very common & we 'll use it many times
+//when we have to generate(new) access token & refresh token then we 'll use the following method, bcoz this work is very common & we 'll use it many times
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
     //first we have to find the user(or userId) from the DB
@@ -166,6 +166,10 @@ const loginUser = asyncHandler(async (req, res) => {
   if (!(username || email)) {
     throw new ApiError(400, "Username or Email is required");
   }
+  //ALTERNATIVE:
+  /*if (username && email) {
+    throw new ApiError(400, "Username or Email is required");
+  }*/
 
   //finding the user either from email or username
   //the refreshToken in this user is empty
@@ -255,37 +259,60 @@ const logoutUser = asyncHandler(async (req, res) => {
   .json(new ApiResponse(200, {}, 'User logged out successfully'))
 });
 
+//generating the controller to get new access tokens
 const refreshAcessToken = asyncHandler(async (req, res) => {
-  //accessing the refresh & access token
+  //the user has the refresh token, and the user has to send the refresh token to the server so that it can get more access tokens
+  //so now from where does the refresh token will come, we can access it from cookies
+  //**accessing the refresh token
+  //maybe someone can use the mobile app then we can access the refresh token from the body
+  //incomingRefreshToken -> the token which the user is sending to us
   const incomingRefreshToken = req.cookies.refreshToken || req.body.refreshToken
   
-  if (incomingRefreshToken) {
+  //**if we does not get the incomingRefreshToken from the user
+  if (!incomingRefreshToken) {
     throw new ApiError(401, 'Unauthorized Request')
   }
 
+  //**Verification - if the token exists then we have to verify it from the DB
+
+  //there can be errors and mistakes while generating the tokens, so we wrapped them in trycatch
   try {
-  
-    //user get the encrypted token but the DB contains the raw token
+    // Verifies the refresh token(as we have done in the auth.middleware.js file) using the secret key stored in the environment variable.
+    // If successful, this returns the decoded payload of the token, which might contain user data.
+    // This verification process ensures the token is valid and hasn't been tampered with.
     const decodedToken = jwt.verify(
       incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET
     )
+    //we have only put one thing in the refreshToken the user id, so we can **query to the DB and access about the user info. using user id
     const user = await User.findById(decodedToken?._id)
   
+    //**if we does not get the user (someone has given fake or wrong token)
     if (!user) {
       throw new ApiError(401, 'Invalid Refresh Token')
     }
   
+    //we have also saved the refresh token of the user (see generateAccessAndRefreshTokens method for more info.)
+    //so we have to **match the saved refresh token & the incomingRefreshToken from the user(which we have decoded)
+    //this is the refreshToken from the user.model.js since we have saved the refresh token there only
     if (incomingRefreshToken !== user?.refreshToken) {
       throw new ApiError(401, 'Refresh Token is expired or used')
     }
   
+    //if both the tokens matched then generate the new tokens
+    //we can generate the new tokens using the generateAccessAndRefreshTokens method
+    //**first we have to send them in cookies using options
+    //we can do more optimization by declaring the options in the global, since we are using it many times
     const options = {
       httpOnly: true,
       secure: true
     }
   
+    //we can do this step before the options also
+    //**generating the new tokens & decoding the values -> {accessToken, newRefreshToken}
+    //we have to take the result also(so we have to store them in a var), means the new generated tokens
     const {accessToken, newRefreshToken} = await generateAccessAndRefreshTokens(user._id)
   
+    //**returning the response to the user
     return res
     .status(200)
     .cookie('accessToken', accessToken, options)
