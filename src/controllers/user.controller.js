@@ -336,7 +336,7 @@ const refreshAcessToken = asyncHandler(async (req, res) => {
 //PURPOSE: to change the current user password
 //we don't have to worry that the user is logged in or not we can add the verifyJWT in the route
 //**extracting the old and new password which the user 'll pass in the req.body
-const changeCurrentUser = asyncHandler(async (req, res) => {
+const changeCurrentPassword = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
 
   //the user is able to change his password this shows that the user is loggedIn
@@ -592,7 +592,7 @@ export {
   loginUser,
   logoutUser,
   refreshAcessToken,
-  changeCurrentUser,
+  changeCurrentPassword,
   getCurrentUser,
   updateAccountDetails,
   updateUserAvatar,
